@@ -1,0 +1,6 @@
+{
+  "appId": "com.muralcta.app",
+  "appName": "Mural CTA",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

@@ -1,0 +1,106 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application, either a student or a leader.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the user (Firebase UID)." },
+        "email": { "type": "string", "format": "email", "description": "The user's email address." },
+        "name": { "type": "string", "description": "The user's full name." },
+        "role": { "type": "string", "enum": ["student", "leader"], "description": "The user's role." },
+        "points": { "type": "integer", "description": "The total points accumulated by the user." },
+        "last_login": { "type": "string", "format": "date-time", "description": "The timestamp of the user's last login." }
+      },
+      "required": ["id", "email", "name", "role"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "An announcement posted by a leader.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the announcement." },
+        "content": { "type": "string", "description": "The content of the announcement." },
+        "date": { "type": "string", "format": "date-time", "description": "The date the announcement was posted." },
+        "is_important": { "type": "boolean", "description": "Whether the announcement is marked as important." },
+        "author_id": { "type": "string", "description": "The ID of the user who posted the announcement." }
+      },
+      "required": ["title", "content", "date", "author_id"]
+    },
+    "Activity": {
+      "title": "Activity",
+      "description": "An activity or task for students.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "The title of the activity." },
+        "description": { "type": "string", "description": "The description of the activity." },
+        "deadline": { "type": "string", "format": "date-time", "description": "The deadline for the activity." },
+        "points": { "type": "integer", "description": "The points awarded for completing the activity." },
+        "subject": { "type": "string", "description": "The subject of the activity." },
+        "pdf_data": { "type": "string", "description": "Base64 or URL for PDF data." },
+        "author_id": { "type": "string", "description": "The ID of the user who created the activity." }
+      },
+      "required": ["title", "description", "deadline", "points", "author_id"]
+    },
+    "ActivityCompletion": {
+      "title": "ActivityCompletion",
+      "description": "Records when a student completes an activity.",
+      "type": "object",
+      "properties": {
+        "activity_id": { "type": "string", "description": "The ID of the activity." },
+        "user_id": { "type": "string", "description": "The ID of the student." },
+        "points_awarded": { "type": "integer", "description": "The points awarded for this completion." },
+        "completed_at": { "type": "string", "format": "date-time", "description": "When the activity was completed." }
+      },
+      "required": ["activity_id", "user_id", "points_awarded"]
+    },
+    "AnnouncementView": {
+      "title": "AnnouncementView",
+      "description": "Records when a student views an announcement.",
+      "type": "object",
+      "properties": {
+        "announcement_id": { "type": "string", "description": "The ID of the announcement." },
+        "user_id": { "type": "string", "description": "The ID of the student." },
+        "viewed_at": { "type": "string", "format": "date-time", "description": "When the announcement was viewed." }
+      },
+      "required": ["announcement_id", "user_id"]
+    },
+    "ActivityView": {
+      "title": "ActivityView",
+      "description": "Records when a student views an activity.",
+      "type": "object",
+      "properties": {
+        "activity_id": { "type": "string", "description": "The ID of the activity." },
+        "user_id": { "type": "string", "description": "The ID of the student." },
+        "viewed_at": { "type": "string", "format": "date-time", "description": "When the activity was viewed." }
+      },
+      "required": ["activity_id", "user_id"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles."
+    },
+    "/announcements/{announcementId}": {
+      "schema": "Announcement",
+      "description": "Announcements collection."
+    },
+    "/activities/{activityId}": {
+      "schema": "Activity",
+      "description": "Activities collection."
+    },
+    "/activity_completions/{completionId}": {
+      "schema": "ActivityCompletion",
+      "description": "Activity completions tracking."
+    },
+    "/announcement_views/{viewId}": {
+      "schema": "AnnouncementView",
+      "description": "Announcement views tracking."
+    },
+    "/activity_views/{viewId}": {
+      "schema": "ActivityView",
+      "description": "Activity views tracking."
+    }
+  }
+}

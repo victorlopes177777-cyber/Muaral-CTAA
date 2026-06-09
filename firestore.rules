@@ -1,0 +1,178 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - id: string (required)
+    //   - email: string (required)
+    //   - name: string (required)
+    //   - role: string (required, 'student' or 'leader')
+    //   - points: number (optional)
+    //   - last_login: string (optional)
+    //
+    // Collection: announcements
+    // Document ID: announcementId
+    // Fields:
+    //   - title: string (required)
+    //   - content: string (required)
+    //   - date: string (required)
+    //   - is_important: bool (optional)
+    //   - author_id: string (required)
+    //
+    // Collection: activities
+    // Document ID: activityId
+    // Fields:
+    //   - title: string (required)
+    //   - description: string (required)
+    //   - deadline: string (required)
+    //   - points: number (required)
+    //   - subject: string (optional)
+    //   - pdf_data: string (optional)
+    //   - author_id: string (required)
+    //
+    // Collection: activity_completions
+    // Document ID: completionId
+    // Fields:
+    //   - activity_id: string (required)
+    //   - user_id: string (required)
+    //   - points_awarded: number (required)
+    //   - completed_at: string (optional)
+    //
+    // Collection: announcement_views
+    // Document ID: viewId
+    // Fields:
+    //   - announcement_id: string (required)
+    //   - user_id: string (required)
+    //   - viewed_at: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "vlp2@aluno.ifmg.edu.br" ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'leader'));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.id is string && data.id.size() > 0 &&
+             data.email is string && isValidEmail(data.email) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.role in ['student', 'leader'];
+    }
+
+    function isValidAnnouncement(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 5000 &&
+             data.date is string &&
+             data.author_id is string;
+    }
+
+    function isValidActivity(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.description is string && data.description.size() > 0 && data.description.size() < 5000 &&
+             data.deadline is string &&
+             data.points is number && data.points >= 0 &&
+             data.author_id is string;
+    }
+
+    function isValidCompletion(data) {
+      return data.activity_id is string &&
+             data.user_id is string &&
+             data.points_awarded is number;
+    }
+
+    function isValidView(data) {
+      return data.announcement_id is string &&
+             data.user_id is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /test/connection {
+      allow read: if true;
+    }
+
+    match /users/{userId} {
+      // Allow users to read their own profile, and admins to read all
+      // For the ranking, we need to allow authenticated users to read names and points
+      // but we should be careful with emails.
+      allow read: if isAuthenticated(); 
+      allow create: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isOwner(userId) || isAdmin());
+      allow update: if isAuthenticated() && isValidUser(request.resource.data) && 
+                    (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role));
+      allow delete: if isAdmin();
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if true; // Public mural
+      allow create: if isAdmin() && isValidAnnouncement(request.resource.data);
+      allow update: if isAdmin() && isValidAnnouncement(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /activities/{activityId} {
+      allow read: if true; // Public activities
+      allow create: if isAdmin() && isValidActivity(request.resource.data);
+      allow update: if isAdmin() && isValidActivity(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /activity_completions/{completionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && (isOwner(request.resource.data.user_id) || isAdmin()) && isValidCompletion(request.resource.data);
+      allow update: if isAdmin();
+      allow delete: if isAuthenticated() && (isOwner(resource.data.user_id) || isAdmin());
+    }
+
+    match /announcement_views/{viewId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(request.resource.data.user_id) && isValidView(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /activity_views/{viewId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(request.resource.data.user_id) && (request.resource.data.activity_id is string);
+      allow delete: if isAdmin();
+    }
+  }
+}

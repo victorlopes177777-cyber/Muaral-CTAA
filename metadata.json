@@ -1,0 +1,5 @@
+{
+  "name": "MURAL DA CTAALTERNÂNCIA",
+  "description": "Plataforma completa para turmas do IFNMG: avisos em tempo real, atividades com PDF, ranking de pontos e gamificação.",
+  "requestFramePermissions": ["notifications"]
+}
